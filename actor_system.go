@@ -52,3 +52,13 @@ func (s *ActorSystem) GetActor(name string) *ActorWrapper {
 type Actor interface {
 	receive(message interface{})
 }
+
+func CreateActorSystem() *ActorSystem {
+	actorSystem := new(ActorSystem)
+	actorSystem.actors = make(map[string]*ActorWrapper)
+	return actorSystem
+}
+
+func (s *ActorSystem) Length() int {
+	return len(s.actors)
+}

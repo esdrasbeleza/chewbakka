@@ -5,16 +5,6 @@ import (
 	"time"
 )
 
-func CreateActorSystem() *ActorSystem {
-	actorSystem := new(ActorSystem)
-	actorSystem.actors = make(map[string]*ActorWrapper)
-	return actorSystem
-}
-
-func (s *ActorSystem) Length() int {
-	return len(s.actors)
-}
-
 func main() {
 	actorSystem := CreateActorSystem()
 	fmt.Printf("Length: %d\n", actorSystem.Length())
