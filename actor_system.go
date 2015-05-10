@@ -2,6 +2,10 @@ package main
 
 import "fmt"
 
+type Actor interface {
+	receive(message interface{})
+}
+
 type ActorSystem struct {
 	actors map[string]*ActorWrapper
 }
@@ -35,6 +39,12 @@ func (r *ActorWrapper) Stop() {
 	r.isRunning = false
 }
 
+func CreateActorSystem() *ActorSystem {
+	actorSystem := new(ActorSystem)
+	actorSystem.actors = make(map[string]*ActorWrapper)
+	return actorSystem
+}
+
 func (s *ActorSystem) AddActor(name string, actor Actor) *ActorWrapper {
 	actorWrapper := new(ActorWrapper)
 	actorWrapper.actor = actor
@@ -47,16 +57,6 @@ func (s *ActorSystem) AddActor(name string, actor Actor) *ActorWrapper {
 
 func (s *ActorSystem) GetActor(name string) *ActorWrapper {
 	return s.actors[name]
-}
-
-type Actor interface {
-	receive(message interface{})
-}
-
-func CreateActorSystem() *ActorSystem {
-	actorSystem := new(ActorSystem)
-	actorSystem.actors = make(map[string]*ActorWrapper)
-	return actorSystem
 }
 
 func (s *ActorSystem) Length() int {
