@@ -35,6 +35,20 @@ func main() {
 	printlnActorWrapper.Stop()
 	postmanActorWrapper.Stop()
 
+	pingActor := PingPongActor{actorSystem: actorSystem, otherPlayerName: "pong"}
+	pongActor := PingPongActor{actorSystem: actorSystem, otherPlayerName: "ping"}
+
+	pingWrapper := actorSystem.AddActor("ping", &pingActor)
+	pongWrapper := actorSystem.AddActor("pong", &pongActor)
+
+	pingWrapper.Start()
+	pongWrapper.Start()
+
+	pingWrapper.Send(PingPongBall{0, 10})
+
+	pingWrapper.Stop()
+	pongWrapper.Stop()
+
 	time.Sleep(500 * time.Millisecond)
 
 	fmt.Println("Leaving")
