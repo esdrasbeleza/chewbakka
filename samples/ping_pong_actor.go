@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/esdrasbeleza/chewbakka"
 )
 
 type PingPongActor struct {
-	actorSystem     *ActorSystem
+	actorSystem     *chewbakka.ActorSystem
 	otherPlayerName string
 }
 
@@ -14,7 +16,7 @@ type PingPongBall struct {
 	max   int
 }
 
-func (a *PingPongActor) receive(message interface{}) {
+func (a *PingPongActor) Receive(message interface{}) {
 	switch m := message.(type) {
 	case PingPongBall:
 		if m.count <= m.max {

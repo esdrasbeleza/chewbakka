@@ -1,11 +1,11 @@
-package main
+package chewbakka
 
 import (
 	"fmt"
 )
 
 type Actor interface {
-	receive(message interface{})
+	Receive(message interface{})
 }
 
 type ActorSystem struct {
@@ -41,7 +41,7 @@ func (r *ActorWrapper) Start() {
 
 			// Since the value may have changed, we check it again
 			if r.isRunning && ok {
-				r.actor.receive(message)
+				r.actor.Receive(message)
 			}
 		}
 

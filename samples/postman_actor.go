@@ -1,9 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/esdrasbeleza/chewbakka"
+)
 
 type PostmanActor struct {
-	actorSystem *ActorSystem
+	actorSystem *chewbakka.ActorSystem
 }
 
 type MessageToSend struct {
@@ -11,7 +15,7 @@ type MessageToSend struct {
 	contents  interface{}
 }
 
-func (p *PostmanActor) receive(message interface{}) {
+func (p *PostmanActor) Receive(message interface{}) {
 	switch m := message.(type) {
 	case MessageToSend:
 		{

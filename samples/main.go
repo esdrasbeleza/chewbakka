@@ -3,28 +3,29 @@ package main
 import (
 	"fmt"
 	"time"
+
+	"github.com/esdrasbeleza/chewbakka"
 )
 
 func main() {
-	actorSystem := CreateActorSystem()
-	fmt.Printf("Length: %d\n", actorSystem.Length())
+	// Create actor system
+	actorSystem := chewbakka.CreateActorSystem()
 
+	// Running Calculator Actor
 	calculatorActor := new(CalculatorActor)
 	calculatorActorWrapper := actorSystem.AddActor("calculator1", calculatorActor)
-	fmt.Printf("Length: %d\n", actorSystem.Length())
+	calculatorActorWrapper.Start()
+	calculatorActorWrapper.Send(NumbersToSum{[]int{1, 2, 3, 4}})
+	calculatorActorWrapper.Send(NumbersToMultiply{[]int{1, 2, 3, 4}})
 
+	// Running Postman Actor
 	postmanActor := new(PostmanActor)
 	postmanActor.actorSystem = actorSystem
 	postmanActorWrapper := actorSystem.AddActor("postman1", postmanActor)
-
-	calculatorActorWrapper.Start()
 	postmanActorWrapper.Start()
-
-	calculatorActorWrapper.Send(NumbersToSum{[]int{1, 2, 3, 4}})
-	calculatorActorWrapper.Send(NumbersToSum{[]int{4, 5, 6, 7}})
 	postmanActorWrapper.Send(MessageToSend{"calculator1", NumbersToSum{[]int{4, 5, 6, 7, 1}}})
 
-	// Sample: ping pong actors
+	// Running Ping Pong actors
 	pingActor := PingPongActor{actorSystem: actorSystem, otherPlayerName: "pong"}
 	pongActor := PingPongActor{actorSystem: actorSystem, otherPlayerName: "ping"}
 
@@ -36,7 +37,7 @@ func main() {
 
 	pingWrapper.Send(PingPongBall{0, 10})
 
-	// Sample: println actor
+	// Running Println Actor
 	printlnActor := new(PrintlnActor)
 	printlnActorWrapper := actorSystem.AddActor("println1", printlnActor)
 	fmt.Printf("Length: %d\n", actorSystem.Length())
