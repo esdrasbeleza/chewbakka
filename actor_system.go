@@ -10,7 +10,8 @@ type Actor interface {
 }
 
 type ActorSystem struct {
-	actors map[string][]*ActorWrapper
+	actors            map[string][]*ActorWrapper
+	deadMessagesActor *ActorWrapper
 }
 
 type ActorWrapper struct {
@@ -63,6 +64,17 @@ func (r *ActorWrapper) Stop() {
 func CreateActorSystem() *ActorSystem {
 	actorSystem := new(ActorSystem)
 	actorSystem.actors = make(map[string][]*ActorWrapper)
+
+	deadMessagesActor := new(DeadMessagesActor)
+	actorWrapper := new(ActorWrapper)
+	actorWrapper.actor = deadMessagesActor
+	actorWrapper.queue = make(chan interface{})
+	actorWrapper.actorSystem = actorSystem
+	actorWrapper.actorName = "Mr. Postman"
+	actorWrapper.Start()
+
+	actorSystem.deadMessagesActor = actorWrapper
+
 	return actorSystem
 }
 
@@ -92,12 +104,17 @@ func (s *ActorSystem) SendMessage(message interface{}) {
 
 	for _, actorArray := range s.actors {
 		for _, actor := range actorArray {
-			for _, supportedType := range actor.messageType {
+			sent := false
 
+			for _, supportedType := range actor.messageType {
 				if supportedType == messageType {
 					actor.Send(message)
+					sent = true
 				}
+			}
 
+			if sent == false {
+				s.deadMessagesActor.Send(message)
 			}
 		}
 	}
