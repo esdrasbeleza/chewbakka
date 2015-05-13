@@ -2,6 +2,7 @@ package chewbakka
 
 import (
 	"fmt"
+	"reflect"
 )
 
 type Actor interface {
@@ -9,7 +10,7 @@ type Actor interface {
 }
 
 type ActorSystem struct {
-	actors map[string]*ActorWrapper
+	actors map[string][]*ActorWrapper
 }
 
 type ActorWrapper struct {
@@ -18,6 +19,7 @@ type ActorWrapper struct {
 	actor       Actor
 	actorSystem *ActorSystem
 	actorName   string
+	messageType []reflect.Type
 }
 
 func (r *ActorWrapper) Send(message interface{}) {
@@ -60,18 +62,23 @@ func (r *ActorWrapper) Stop() {
 
 func CreateActorSystem() *ActorSystem {
 	actorSystem := new(ActorSystem)
-	actorSystem.actors = make(map[string]*ActorWrapper)
+	actorSystem.actors = make(map[string][]*ActorWrapper)
 	return actorSystem
 }
 
-func (s *ActorSystem) AddActor(name string, actor Actor) *ActorWrapper {
+func (s *ActorSystem) AddActor(name string, messageTypes []interface{}, actor Actor) *ActorWrapper {
 	actorWrapper := new(ActorWrapper)
 	actorWrapper.actor = actor
 	actorWrapper.queue = make(chan interface{})
 	actorWrapper.actorSystem = s
 	actorWrapper.actorName = name
 
-	s.actors[name] = actorWrapper
+	actorWrapper.messageType = make([]reflect.Type, len(messageTypes))
+	for i, v := range messageTypes {
+		actorWrapper.messageType[i] = reflect.TypeOf(v)
+	}
+
+	s.actors[name] = []*ActorWrapper{actorWrapper}
 
 	return actorWrapper
 }
@@ -80,7 +87,23 @@ func (s *ActorSystem) RemoveActor(name string) {
 	delete(s.actors, name)
 }
 
-func (s *ActorSystem) GetActor(name string) *ActorWrapper {
+func (s *ActorSystem) SendMessage(message interface{}) {
+	messageType := reflect.TypeOf(message)
+
+	for _, actorArray := range s.actors {
+		for _, actor := range actorArray {
+			for _, supportedType := range actor.messageType {
+
+				if supportedType == messageType {
+					actor.Send(message)
+				}
+
+			}
+		}
+	}
+}
+
+func (s *ActorSystem) GetActors(name string) []*ActorWrapper {
 	return s.actors[name]
 }
 
