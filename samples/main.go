@@ -12,18 +12,18 @@ func main() {
 	actorSystem := chewbakka.CreateActorSystem()
 
 	// Running Calculator Actor
-	calculatorActor := new(CalculatorActor)
-	types := []interface{}{NumbersToMultiply{}, NumbersToSum{}}
-	calculatorActorWrapper := actorSystem.AddActor("calculator1", types, calculatorActor)
-	calculatorActorWrapper.Start()
+	types := []interface{}{NumbersToSum{}, NumbersToMultiply{}}
+
+	actorSystem.AddActor("calculator", types, &CalculatorActor{1}).Start()
+	actorSystem.AddActor("calculator", types, &CalculatorActor{2}).Start()
 
 	actorSystem.SendMessage(NumbersToSum{[]int{1, 2, 3, 4}})
-	actorSystem.SendMessage("This message won't be handled")
 	actorSystem.SendMessage(NumbersToMultiply{[]int{1, 2, 3, 4}})
+	actorSystem.SendMessage(NumbersToDivide{[]int{1, 2, 3, 4}})
 
-	time.Sleep(4 * time.Second)
+	time.Sleep(1 * time.Second)
 
-	calculatorActorWrapper.Stop()
+	actorSystem.Stop()
 
 	fmt.Println("Leaving")
 }

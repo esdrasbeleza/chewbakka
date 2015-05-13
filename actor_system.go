@@ -9,9 +9,30 @@ type Actor interface {
 	Receive(message interface{})
 }
 
+type DeadLetters struct{}
+
+func (c *DeadLetters) Receive(message interface{}) {
+	fmt.Println("** Received a Dead Letter **\n", reflect.TypeOf(message), message)
+}
+
+type ActorRouter interface {
+	Select([]*ActorWrapper) *ActorWrapper
+}
+
+type RoundRobin struct {
+	position int
+}
+
+func (x *RoundRobin) Select(v []*ActorWrapper) *ActorWrapper {
+	x.position += 1
+	return v[x.position%len(v)]
+}
+
 type ActorSystem struct {
-	actors            map[string][]*ActorWrapper
-	deadMessagesActor *ActorWrapper
+	actors      map[string][]*ActorWrapper
+	recieves    map[string][]reflect.Type
+	router      ActorRouter
+	deadLetters *ActorWrapper
 }
 
 type ActorWrapper struct {
@@ -64,35 +85,61 @@ func (r *ActorWrapper) Stop() {
 func CreateActorSystem() *ActorSystem {
 	actorSystem := new(ActorSystem)
 	actorSystem.actors = make(map[string][]*ActorWrapper)
+	actorSystem.recieves = make(map[string][]reflect.Type)
+	actorSystem.router = new(RoundRobin)
 
-	deadMessagesActor := new(DeadMessagesActor)
-	actorWrapper := new(ActorWrapper)
-	actorWrapper.actor = deadMessagesActor
-	actorWrapper.queue = make(chan interface{})
-	actorWrapper.actorSystem = actorSystem
-	actorWrapper.actorName = "Mr. Postman"
-	actorWrapper.Start()
+	deadLetters := new(ActorWrapper)
+	deadLetters.actor = new(DeadLetters)
+	deadLetters.queue = make(chan interface{})
+	deadLetters.actorSystem = actorSystem
+	deadLetters.actorName = "DeadLetters"
+	deadLetters.messageType = []reflect.Type{}
 
-	actorSystem.deadMessagesActor = actorWrapper
+	actorSystem.deadLetters = deadLetters
+
+	deadLetters.Start()
 
 	return actorSystem
 }
 
 func (s *ActorSystem) AddActor(name string, messageTypes []interface{}, actor Actor) *ActorWrapper {
-	actorWrapper := new(ActorWrapper)
-	actorWrapper.actor = actor
-	actorWrapper.queue = make(chan interface{})
-	actorWrapper.actorSystem = s
-	actorWrapper.actorName = name
-
-	actorWrapper.messageType = make([]reflect.Type, len(messageTypes))
+	types := make([]reflect.Type, len(messageTypes))
 	for i, v := range messageTypes {
-		actorWrapper.messageType[i] = reflect.TypeOf(v)
+		types[i] = reflect.TypeOf(v)
 	}
 
-	s.actors[name] = []*ActorWrapper{actorWrapper}
+	matches := func(x, y []reflect.Type) bool {
+		if len(x) != len(y) {
+			return false
+		}
+		for k, v := range x {
+			if v != y[k] {
+				return false
+			}
+		}
+		return true
+	}
 
-	return actorWrapper
+	x, ok := s.recieves[name]
+	if !ok || matches(types, x) {
+
+		actorWrapper := new(ActorWrapper)
+		actorWrapper.actor = actor
+		actorWrapper.queue = make(chan interface{})
+		actorWrapper.actorSystem = s
+		actorWrapper.actorName = name
+		actorWrapper.messageType = types
+
+		if x, ok := s.actors[name]; ok {
+			s.actors[name] = append(x, actorWrapper)
+		} else {
+			s.actors[name] = []*ActorWrapper{actorWrapper}
+		}
+		s.recieves[name] = types
+
+		return actorWrapper
+	}
+	return nil
 }
 
 func (s *ActorSystem) RemoveActor(name string) {
@@ -102,21 +149,29 @@ func (s *ActorSystem) RemoveActor(name string) {
 func (s *ActorSystem) SendMessage(message interface{}) {
 	messageType := reflect.TypeOf(message)
 
-	for _, actorArray := range s.actors {
-		for _, actor := range actorArray {
-			sent := false
-
-			for _, supportedType := range actor.messageType {
-				if supportedType == messageType {
-					actor.Send(message)
-					sent = true
-				}
-			}
-
-			if sent == false {
-				s.deadMessagesActor.Send(message)
+	contains := func(x []reflect.Type, y reflect.Type) bool {
+		for _, v := range x {
+			if v == y {
+				return true
 			}
 		}
+		return false
+	}
+
+	found := false
+	for k, v := range s.recieves {
+		if contains(v, messageType) {
+			if x, ok := s.actors[k]; ok {
+				found = true
+
+				actor := s.router.Select(x)
+				actor.Send(message)
+			}
+		}
+	}
+
+	if !found {
+		s.deadLetters.Send(message)
 	}
 }
 
@@ -124,6 +179,18 @@ func (s *ActorSystem) GetActors(name string) []*ActorWrapper {
 	return s.actors[name]
 }
 
+func (s *ActorSystem) Stop() {
+	for _, x := range s.actors {
+		for _, y := range x {
+			y.Stop()
+		}
+	}
+}
+
 func (s *ActorSystem) Length() int {
-	return len(s.actors)
+	sum := 0
+	for _, x := range s.actors {
+		sum += len(x)
+	}
+	return sum
 }

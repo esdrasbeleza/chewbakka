@@ -4,7 +4,9 @@ import (
 	"fmt"
 )
 
-type CalculatorActor struct{}
+type CalculatorActor struct {
+	Id int
+}
 
 type NumbersToSum struct {
 	numbers []int
@@ -14,13 +16,17 @@ type NumbersToMultiply struct {
 	numbers []int
 }
 
+type NumbersToDivide struct {
+	numbers []int
+}
+
 func (c *CalculatorActor) Receive(message interface{}) {
-	fmt.Println("CalculatorActor handling message")
+	fmt.Printf("CalculatorActor (id:%v) handling message\n", c.Id)
 
 	switch m := message.(type) {
 	case NumbersToSum:
 		{
-			fmt.Println("We got numbers to sum")
+			fmt.Printf("CalculatorActor (id:%v) We got numbers to sum\n", c.Id)
 			sum := 0
 			for _, value := range m.numbers {
 				sum = sum + value
@@ -29,7 +35,7 @@ func (c *CalculatorActor) Receive(message interface{}) {
 		}
 	case NumbersToMultiply:
 		{
-			fmt.Println("We got numbers to multiply")
+			fmt.Printf("CalculatorActor (id:%v) We got numbers to multiply\n", c.Id)
 			sum := 1
 			for _, value := range m.numbers {
 				sum = sum * value
